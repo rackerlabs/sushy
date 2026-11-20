@@ -14,8 +14,10 @@
 
 import logging
 
+from sushy import exceptions
 from sushy.resources import base
 from sushy.resources import common
+from sushy.taskmonitor import TaskMonitor
 
 LOG = logging.getLogger(__name__)
 
@@ -23,6 +25,14 @@ LOG = logging.getLogger(__name__)
 class ActionsField(base.CompositeField):
     remote_service_api_status = common.ActionField(
         "#DellLCService.GetRemoteServicesAPIStatus")
+    support_assist_get_eula_status = common.ActionField(
+        '#DellLCService.SupportAssistGetEULAStatus')
+    support_assist_accept_eula = common.ActionField(
+        '#DellLCService.SupportAssistAcceptEULA')
+    support_assist_register = common.ActionField(
+        '#DellLCService.SupportAssistRegister')
+    support_assist_collection = common.ActionField(
+        '#DellLCService.SupportAssistCollection')
 
 
 class DellLCService(base.ResourceBase):
@@ -77,3 +87,80 @@ class DellLCService(base.ResourceBase):
         """
         LOG.debug('Checking to see if the real-time operations are ready...')
         return self._is_remote_service_api_status_ready('RTStatus')
+
+    def _support_assist_action(self, field, name):
+        action = getattr(self._actions, field)
+        if not action or not action.target_uri:
+            raise exceptions.MissingActionError(
+                action=name, resource=self.path)
+        return action.target_uri
+
+    def support_assist_get_eula_status(self):
+        """Return Dell's EULA status, including ExtendedInfo messages.
+
+        Dell identifies accepted/not accepted EULAs with message codes
+        SRV074/SRV104 respectively, rather than a boolean property.
+        """
+        target = self._support_assist_action(
+            'support_assist_get_eula_status', 'SupportAssistGetEULAStatus')
+        return self._conn.post(target, data={}).json()
+
+    def support_assist_accept_eula(self):
+        """Explicitly accept the EULA and return Dell's confirmation."""
+        target = self._support_assist_action(
+            'support_assist_accept_eula', 'SupportAssistAcceptEULA')
+        return self._conn.post(target, data={}).json()
+
+    def support_assist_register(self, registration):
+        """Register SupportAssist using Dell contact/address fields.
+
+        :param registration: Dictionary of SupportAssistRegister parameters.
+            Registration requires iSM and is absent on newer firmware.
+            This method does not enable OS-to-BMC passthrough or accept EULA.
+        :returns: Dell's registration response.
+        :raises: MissingActionError if registration is not advertised.
+        """
+        target = self._support_assist_action(
+            'support_assist_register', 'SupportAssistRegister')
+        return self._conn.post(target, data=registration).json()
+
+    def support_assist_collect(self, *, data_types, filter_data, share_type,
+                               ip_address, share_name, username=None,
+                               password=None, port=None):
+        """Start an offline SupportAssist collection to a network share.
+
+        :param data_types: Iterable of SupportAssistDataType enum values.
+        :param filter_data: Boolean selecting Dell's PII filtering.
+        :param share_type: SupportAssistShareType enum value.
+        :param ip_address: Destination server address.
+        :param share_name: Destination share/directory path.
+        :param username: Optional share username.
+        :param password: Optional share password.
+        :param port: Optional destination port (HTTP/HTTPS).
+        :returns: Standard TaskMonitor, reusable with get_task_monitor(),
+            without waiting for completion.
+        :raises: MissingActionError if collection is not advertised.
+        """
+        target = self._support_assist_action(
+            'support_assist_collection', 'SupportAssistCollection')
+        payload = {
+            'DataSelectorArrayIn': [item.value for item in data_types],
+            'Filter': 'Yes' if filter_data else 'No',
+            'ShareType': share_type.value,
+            'IPAddress': ip_address,
+            'ShareName': share_name,
+            'Transmit': 'No',
+        }
+        for key, value in (('UserName', username), ('Password', password),
+                           ('PortNumber', port)):
+            if value is not None:
+                payload[key] = value
+        response = self._conn.post(target, data=payload)
+        monitor_uri = response.headers.get('Location')
+        if not monitor_uri:
+            raise exceptions.MissingHeaderError(
+                target_uri=target, header='Location')
+        return TaskMonitor(
+            self._conn, monitor_uri, response=response,
+            redfish_version=self.redfish_version,
+            registries=self.registries)
