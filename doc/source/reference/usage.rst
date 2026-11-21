@@ -351,3 +351,48 @@ For the OEM extension example, presently, both of the emulators
 (static/dynamic) do not expose any OEM; as a result, users may need to add
 manually some OEM resources to emulators' templates. It may be easier to
 start with a static emulator.
+
+Dell SupportAssist
+~~~~~~~~~~~~~~~~~~
+
+The Dell manager extension's ``lifecycle_service`` exposes SupportAssist EULA
+status and acceptance, registration, and collection to a network share. Each
+method uses the action target advertised by the service and raises
+``MissingActionError`` when it is absent. Registration is absent on newer
+firmware and is not a prerequisite enforced by the collection method.
+
+.. code-block:: python
+
+    from sushy.oem.dell.resources.manager import constants as dell_constants
+
+    dell = manager.get_oem_extension('Dell')
+    service = dell.lifecycle_service
+    status = service.support_assist_get_eula_status()
+    # Inspect Dell's @Message.ExtendedInfo: SRV074 means accepted,
+    # SRV104 means not accepted. Acceptance is a separate explicit action:
+    # service.support_assist_accept_eula()
+
+    monitor = service.support_assist_collect(
+        data_types=[dell_constants.SupportAssistDataType.HARDWARE],
+        filter_data=False,
+        share_type=dell_constants.SupportAssistShareType.NFS,
+        ip_address='192.0.2.10', share_name='/export/supportassist')
+    monitor_uri = monitor.task_monitor_uri
+
+    # Poll later, possibly using a new connection:
+    monitor = root.get_task_monitor(monitor_uri)
+
+The returned object is the standard ``sushy.taskmonitor.TaskMonitor``.
+``root.get_task_monitor(monitor_uri)`` uses the same polling interface as other
+asynchronous Redfish operations. Preserve the returned URI when polling; it
+may identify a TaskService task or task monitor.
+
+The collection call returns without waiting. It explicitly requires the data
+selectors, filtering choice and destination; firmware validates its supported
+selectors and prerequisites. Optional ``username``, ``password`` and ``port``
+are sent as share credentials and destination port. HTTP/HTTPS support custom
+ports on firmware that advertises that parameter. The method requests direct
+export to the share with ``Transmit=No`` and does not download the bundle.
+EULA acceptance, registration and OS-to-BMC settings are never changed
+implicitly. ``support_assist_register(registration)`` accepts a dictionary of
+Dell contact/address parameters and returns the original registration response.

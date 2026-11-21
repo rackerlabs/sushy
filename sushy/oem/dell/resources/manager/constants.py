@@ -15,6 +15,28 @@
 import enum
 
 
+class SupportAssistDataType(enum.Enum):
+    """Diagnostic data available to SupportAssist collections."""
+
+    HARDWARE = 'HWData'
+    DEBUG = 'DebugLogs'
+    OS_APPLICATION = 'OSAppData'
+    STORAGE_TTY = 'TTYLogs'
+    TELEMETRY = 'TelemetryReports'
+    GPU = 'GPULogs'
+
+
+class SupportAssistShareType(enum.Enum):
+    """Network destinations for SupportAssist collections."""
+
+    CIFS = 'CIFS'
+    FTP = 'FTP'
+    HTTP = 'HTTP'
+    HTTPS = 'HTTPS'
+    NFS = 'NFS'
+    TFTP = 'TFTP'
+
+
 class ExportTarget(enum.Enum):
     """Export system config action constants"""
 

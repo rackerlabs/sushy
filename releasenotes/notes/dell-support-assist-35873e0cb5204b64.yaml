@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Adds Dell Lifecycle Controller SupportAssist actions for EULA status and
+    acceptance, registration when advertised, and collection to a network
+    share. Collection takes explicit data selectors, filtering and destination
+    inputs and returns the standard ``TaskMonitor`` without waiting or
+    downloading a bundle. Poll the returned URI with the generic
+    ``get_task_monitor()`` interface.
