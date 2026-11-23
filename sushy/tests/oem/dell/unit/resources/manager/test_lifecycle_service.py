@@ -124,6 +124,25 @@ class DellLCServiceTestCase(BaseTestCase):
             self.lifecycle_service.path
             + '/Actions/DellLCService.SupportAssistAcceptEULA', data={})
 
+    def test_support_assist_eula_empty_response(self):
+        for method in (self.lifecycle_service.support_assist_get_eula_status,
+                       self.lifecycle_service.support_assist_accept_eula):
+            with self.subTest(method=method.__name__):
+                response = self.conn.post.return_value
+                response.content = b''
+                response.json.side_effect = ValueError('Empty response')
+                self.assertEqual({}, method())
+                response.json.assert_not_called()
+
+    def test_support_assist_eula_invalid_json(self):
+        for method in (self.lifecycle_service.support_assist_get_eula_status,
+                       self.lifecycle_service.support_assist_accept_eula):
+            with self.subTest(method=method.__name__):
+                response = self.conn.post.return_value
+                response.content = b'not JSON'
+                response.json.side_effect = ValueError('Invalid JSON')
+                self.assertRaises(exceptions.SushyError, method)
+
     def test_support_assist_collection_missing(self):
         del self.lifecycle_service.json['Actions'][
             '#DellLCService.SupportAssistCollection']

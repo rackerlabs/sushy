@@ -93,6 +93,14 @@ class DellLCService(base.ResourceBase):
                 action=name, resource=self.path)
         return action.target_uri
 
+    def _support_assist_eula_response(self, target):
+        response = self._conn.post(target, data={})
+        try:
+            return response.json() if response.content else {}
+        except ValueError as exc:
+            raise exceptions.SushyError(
+                f'Invalid SupportAssist EULA JSON response: {exc}')
+
     def support_assist_get_eula_status(self):
         """Return Dell's EULA status, including ExtendedInfo messages.
 
@@ -101,13 +109,13 @@ class DellLCService(base.ResourceBase):
         """
         target = self._support_assist_action(
             'support_assist_get_eula_status', 'SupportAssistGetEULAStatus')
-        return self._conn.post(target, data={}).json()
+        return self._support_assist_eula_response(target)
 
     def support_assist_accept_eula(self):
         """Explicitly accept the EULA and return Dell's confirmation."""
         target = self._support_assist_action(
             'support_assist_accept_eula', 'SupportAssistAcceptEULA')
-        return self._conn.post(target, data={}).json()
+        return self._support_assist_eula_response(target)
 
     def support_assist_collect(self, *, data_types, filter_data, share_type,
                                ip_address, share_name, username=None,
