@@ -5,6 +5,15 @@
    "Actions": {
       "#DellLCService.GetRemoteServicesAPIStatus": {
          "target": "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService/Actions/DellLCService.GetRemoteServicesAPIStatus"
+      },
+      "#DellLCService.SupportAssistGetEULAStatus": {
+         "target": "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService/Actions/DellLCService.SupportAssistGetEULAStatus"
+      },
+      "#DellLCService.SupportAssistAcceptEULA": {
+         "target": "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService/Actions/DellLCService.SupportAssistAcceptEULA"
+      },
+      "#DellLCService.SupportAssistCollection": {
+         "target": "/redfish/v1/Dell/Managers/iDRAC.Embedded.1/DellLCService/Actions/DellLCService.SupportAssistCollection"
       }
    },
    "Description": "The DellLCService resource provides some actions to support Lifecycle Controller functionality.",
